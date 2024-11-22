@@ -5,9 +5,9 @@ from dotenv import load_dotenv
 
 # Load environment variables from .env file and load the bot token and channel info
 load_dotenv()
-DISCORD_BOT_TOKEN = os.getenv('DISCORD_BOT_TOKEN')
-CHANNEL_ID = os.getenv('CHANNEL_ID')
-print("Bot token loaded:", DISCORD_BOT_TOKEN)
+BOT_TOKEN = os.getenv('BOT_TOKEN')
+CHANNEL_ID = int(os.getenv('CHANNEL_ID'))
+print("Bot token loaded:", BOT_TOKEN)
 print(f"{CHANNEL_ID = }")
 
 async def send_message():
