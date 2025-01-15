@@ -2,8 +2,10 @@ import discord
 import logging
 import os
 import pendulum
+import sys
 import yaml
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
 from enum import Enum
@@ -122,9 +124,9 @@ class SafetySwitchBot(commands.Cog):
         except Exception as e:
             logger.error(f"Error saving events to YAML: {e}")
 
-    @tasks.loop(seconds=3600)  # SAFETY_INTERVAL = 3600 seconds (1 hour)
+    @tasks.loop(hours=1)
     async def status_update_loop(self) -> None:
-        try:
+        try: # Once per hour, send a message in the status channel to show that the bot is awake
             channel = self.bot.get_channel(Channel.STATUS.value)
             if channel:
                 await channel.send("Safety Switch status update: All is well. Sending a friendly ping from the digital ocean.")
@@ -133,6 +135,15 @@ class SafetySwitchBot(commands.Cog):
         except Exception as e:
             logger.error(f"Error during check-in: {e}")
 
+    @status_update_loop.before_loop
+    async def before_status_update_loop(self) -> None:
+        # Calculate delay until the top of the next hour
+        now = datetime.utcnow()
+        next_hour = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+        delay = (next_hour - now).total_seconds()
+        logger.info(f"Waiting {delay} seconds to synchronize loop with the top of the hour.")
+        await asyncio.sleep(delay)
+        
     @tasks.loop(minutes=1)
     async def alert_loop(self) -> None:
         now = pendulum.now("UTC").start_of('minute')  # Get the current time in UTC
@@ -173,16 +184,8 @@ class SafetySwitchBot(commands.Cog):
 
     @commands.command(name='reset')
     async def reset_switch(self, ctx: commands.Context) -> None:
-        await ctx.send("Safety Switch timer has been reset. All is good here!")
-        if self.status_update_loop.is_running(): # Start or restart the status update message loop
-            self.status_update_loop.restart()
-        else:
-            self.status_update_loop.start()
-        if self.alert_loop.is_running(): # Start or restart the alert loop
-            self.alert_loop.restart()
-        else:
-            self.alert_loop.start()
-        self.last_disarm_time = pendulum.now("UTC")
+        await ctx.send("I'm gonna take a quick nap... I'll be back in a sec.")
+        sys.exit(0)
 
     @commands.command(name='status')
     async def status(self, ctx: commands.Context) -> None:
